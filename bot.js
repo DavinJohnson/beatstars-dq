@@ -128,6 +128,8 @@ async function main() {
   // Auto-detect supported links in chat
   client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
+    // Ignore messages that start with a bot command prefix (e.g. m!, !, ., $, ?)
+    if (/^[a-zA-Z0-9]?[!?.$/\\]/.test(message.content.trimStart())) return;
     const urls = message.content.match(SUPPORTED_URL_RE);
     if (!urls) return;
 
