@@ -176,7 +176,8 @@ async function handleStems(url, stem, replyFn) {
       const now = Date.now();
       if (now - lastEdit < 3000) return;
       lastEdit = now;
-      replyFn({ content: `${baseStatus}\n\`\`\`\n${line}\n\`\`\`` }).catch(() => {});
+      const truncated = line.length > 200 ? line.slice(0, 200) : line;
+      replyFn({ content: `${baseStatus}\n\`\`\`\n${truncated}\n\`\`\`` }).catch(() => {});
     };
 
     const stemPaths = await splitStems(tempAudio, tempStemDir, wantedStems, onProgress);
@@ -228,7 +229,8 @@ async function handleStems(url, stem, replyFn) {
     }
 
   } catch (err) {
-    await replyFn({ content: `❌ Stem splitting failed: ${err.message}` });
+    const msg = err.message.length > 1800 ? err.message.slice(0, 1800) + '…' : err.message;
+    await replyFn({ content: `❌ Stem splitting failed:\n\`\`\`\n${msg}\n\`\`\`` });
   } finally {
     if (fs.existsSync(tempAudio)) fs.unlinkSync(tempAudio);
     if (fs.existsSync(tempStemDir)) fs.rmSync(tempStemDir, { recursive: true, force: true });
