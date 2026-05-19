@@ -169,19 +169,20 @@ async function handleStems(url, stem, replyFn) {
       ? ['vocals', 'drums', 'bass', 'other']
       : [wantedStem];
 
-    // Throttled progress updater — edit the message at most once every 3s
+    // Throttled progress updater — fire-and-forget, never blocks the main flow
     let lastEdit = 0;
-    const onProgress = async (line) => {
+    const onProgress = (line) => {
       if (!line) return;
       const now = Date.now();
       if (now - lastEdit < 3000) return;
       lastEdit = now;
-      try {
-        await replyFn({ content: `${baseStatus}\n\`\`\`\n${line}\n\`\`\`` });
-      } catch { /* ignore edit failures */ }
+      replyFn({ content: `${baseStatus}\n\`\`\`\n${line}\n\`\`\`` }).catch(() => {});
     };
 
     const stemPaths = await splitStems(tempAudio, tempStemDir, wantedStems, onProgress);
+
+    // Small pause to let any in-flight progress edits settle before we send the file
+    await new Promise((r) => setTimeout(r, 500));
 
     const entries = Object.entries(stemPaths);
     const bpmFile = info.bpm ? ` (${info.bpm} BPM)` : '';
