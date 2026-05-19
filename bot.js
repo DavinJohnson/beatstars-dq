@@ -159,7 +159,8 @@ async function handleStems(url, stem, replyFn) {
     return;
   }
 
-  await replyFn({ content: `🎛️ Splitting **${wantedStem}** stem from ${displayName}...\n*This may take a few minutes on first run (downloads model ~80MB)*` });
+  const baseStatus = `🎛️ Splitting **${wantedStem}** stem from ${displayName}...\n*First run downloads the model (~80MB) — subsequent runs are faster*`;
+  await replyFn({ content: baseStatus });
 
   const tempStemDir = path.join(os.tmpdir(), `dq-stems-${Date.now()}`);
 
@@ -168,7 +169,19 @@ async function handleStems(url, stem, replyFn) {
       ? ['vocals', 'drums', 'bass', 'other']
       : [wantedStem];
 
-    const stemPaths = await splitStems(tempAudio, tempStemDir, wantedStems);
+    // Throttled progress updater — edit the message at most once every 3s
+    let lastEdit = 0;
+    const onProgress = async (line) => {
+      if (!line) return;
+      const now = Date.now();
+      if (now - lastEdit < 3000) return;
+      lastEdit = now;
+      try {
+        await replyFn({ content: `${baseStatus}\n\`\`\`\n${line}\n\`\`\`` });
+      } catch { /* ignore edit failures */ }
+    };
+
+    const stemPaths = await splitStems(tempAudio, tempStemDir, wantedStems, onProgress);
 
     const entries = Object.entries(stemPaths);
     const bpmFile = info.bpm ? ` (${info.bpm} BPM)` : '';
