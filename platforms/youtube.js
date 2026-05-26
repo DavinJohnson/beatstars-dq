@@ -22,6 +22,10 @@ async function getYtDlp() {
   }
 
   _ytdlp = new YTDlpWrap(BINARY_PATH);
+
+  // Auto-update yt-dlp in the background — old versions get throttled by YouTube
+  _ytdlp.exec(['--update']).on('close', () => {}).on('error', () => {});
+
   return _ytdlp;
 }
 
@@ -51,13 +55,15 @@ async function downloadTrack(input, destPath) {
   await new Promise((resolve, reject) => {
     ytdlp.exec([
       input.trim(),
+      '--format', 'bestaudio[ext=m4a]/bestaudio/best',  // audio-only stream, no video download
       '--extract-audio',
       '--audio-format', 'mp3',
-      '--audio-quality', '0',        // best quality
+      '--audio-quality', '0',
       '--no-playlist',
       '--output', destNoExt + '.%(ext)s',
       '--quiet',
       '--no-warnings',
+      '--no-check-certificates',
     ])
       .on('ytDlpEvent', () => {})
       .on('error', reject)
